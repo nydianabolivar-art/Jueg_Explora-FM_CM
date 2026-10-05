@@ -1,0 +1,1062 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Expedición ∂ — El Mundo de las Derivadas Parciales</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+window.MathJax = { tex: { inlineMath: [['\\(','\\)']], displayMath: [['\\[','\\]']] }, svg: { fontCache: 'global' } };
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-svg.min.js"></script>
+<style>
+:root{
+  --bg-deep:#040A1E; --bg-navy:#0A1330; --bg-panel:rgba(16,26,58,.62);
+  --glass-border:rgba(120,160,255,.18);
+  --cyan:#22D3EE; --orange:#F97316; --violet:#A78BFA; --green:#10B981; --gold:#FBBF24; --red:#F87171;
+  --text:#E8EEFF; --text-dim:#93A3C8;
+  --shadow-glow:0 0 28px rgba(34,211,238,.22);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%}
+body{
+  font-family:'Segoe UI',system-ui,-apple-system,Roboto,sans-serif;
+  color:var(--text); min-height:100vh; overflow-x:hidden;
+  background:
+    radial-gradient(1100px 600px at 85% -10%, rgba(167,139,250,.14), transparent 60%),
+    radial-gradient(900px 700px at -10% 30%, rgba(34,211,238,.12), transparent 55%),
+    radial-gradient(800px 500px at 60% 110%, rgba(249,115,22,.10), transparent 60%),
+    linear-gradient(160deg, var(--bg-deep) 0%, var(--bg-navy) 55%, #071026 100%);
+  background-attachment:fixed;
+}
+/* estrellas ambientales */
+#stars{position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.7}
+.wrap{position:relative;z-index:1;max-width:1180px;margin:0 auto;padding:18px 20px 60px}
+/* ===== HUD ===== */
+#hud{
+  position:sticky;top:10px;z-index:50;display:none;
+  backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+  background:linear-gradient(120deg, rgba(14,23,52,.85), rgba(20,30,66,.72));
+  border:1px solid var(--glass-border);border-radius:18px;
+  padding:10px 18px;margin-bottom:18px;
+  display:none;align-items:center;gap:16px;flex-wrap:wrap;
+  box-shadow:0 8px 32px rgba(0,0,0,.45);
+}
+#hud .avatar{width:42px;height:42px;border-radius:50%;
+  background:conic-gradient(from 120deg,var(--cyan),var(--violet),var(--orange),var(--cyan));
+  display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1.1rem;color:#04102A;flex-shrink:0}
+#hud .pname{font-weight:700;letter-spacing:.3px}
+#hud .lvl{font-size:.78rem;color:var(--text-dim)}
+.xpbar{flex:1;min-width:160px;height:12px;border-radius:8px;background:rgba(255,255,255,.08);overflow:hidden;border:1px solid rgba(255,255,255,.08)}
+.xpbar>div{height:100%;width:0%;border-radius:8px;background:linear-gradient(90deg,var(--cyan),var(--violet));transition:width .6s cubic-bezier(.2,.9,.3,1.2)}
+.xpnum{font-size:.85rem;color:var(--cyan);font-weight:700;white-space:nowrap}
+.medals{display:flex;gap:6px}
+.medal{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1rem;
+  background:rgba(255,255,255,.05);border:1px dashed rgba(255,255,255,.18);filter:grayscale(1);opacity:.45;transition:.4s}
+.medal.won{filter:none;opacity:1;border:1px solid var(--gold);box-shadow:0 0 14px rgba(251,191,36,.45);transform:scale(1.05)}
+.hudbtn{background:rgba(255,255,255,.06);border:1px solid var(--glass-border);color:var(--text-dim);
+  border-radius:10px;padding:6px 12px;cursor:pointer;font-size:.78rem;transition:.25s}
+.hudbtn:hover{color:var(--text);border-color:var(--cyan)}
+/* ===== Pantallas ===== */
+.screen{display:none;animation:fadeUp .55s ease}
+.screen.active{display:block}
+@keyframes fadeUp{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
+/* ===== Portada ===== */
+#scr-inicio{text-align:center;padding-top:6vh}
+.kicker{display:inline-block;letter-spacing:4px;font-size:.78rem;color:var(--cyan);
+  border:1px solid rgba(34,211,238,.4);border-radius:999px;padding:6px 18px;margin-bottom:22px;
+  background:rgba(34,211,238,.07)}
+h1.title{font-size:clamp(2.2rem,6vw,4rem);font-weight:900;line-height:1.05;
+  background:linear-gradient(95deg,#fff 10%,var(--cyan) 40%,var(--violet) 70%,var(--orange) 100%);
+  -webkit-background-clip:text;background-clip:text;color:transparent;margin-bottom:14px}
+.subtitle{color:var(--text-dim);max-width:640px;margin:0 auto 30px;font-size:1.05rem;line-height:1.6}
+.namebox{max-width:420px;margin:0 auto 26px;display:flex;gap:10px}
+.namebox input{flex:1;padding:14px 18px;border-radius:14px;border:1px solid var(--glass-border);
+  background:rgba(255,255,255,.06);color:var(--text);font-size:1rem;outline:none;transition:.3s}
+.namebox input:focus{border-color:var(--cyan);box-shadow:var(--shadow-glow)}
+.btn{display:inline-flex;align-items:center;gap:10px;justify-content:center;
+  padding:14px 30px;border-radius:14px;border:none;cursor:pointer;font-size:1rem;font-weight:700;
+  color:#051026;background:linear-gradient(95deg,var(--cyan),var(--violet));
+  box-shadow:0 6px 24px rgba(34,211,238,.35);transition:transform .2s,box-shadow .2s}
+.btn:hover{transform:translateY(-2px);box-shadow:0 10px 30px rgba(167,139,250,.45)}
+.btn.secondary{background:rgba(255,255,255,.08);color:var(--text);border:1px solid var(--glass-border);box-shadow:none}
+.btn.gold{background:linear-gradient(95deg,var(--gold),var(--orange));box-shadow:0 6px 24px rgba(251,191,36,.4)}
+.btn:disabled{opacity:.45;cursor:not-allowed;transform:none}
+.feat-row{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;margin-top:40px}
+.feat{backdrop-filter:blur(10px);background:var(--bg-panel);border:1px solid var(--glass-border);
+  border-radius:16px;padding:16px 20px;width:200px;font-size:.85rem;color:var(--text-dim);line-height:1.5}
+.feat b{display:block;color:var(--text);margin-bottom:4px;font-size:.95rem}
+/* ===== Mapa ===== */
+.map-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:18px;margin-top:24px}
+.world{position:relative;backdrop-filter:blur(12px);background:var(--bg-panel);
+  border:1px solid var(--glass-border);border-radius:20px;padding:24px 22px;cursor:pointer;
+  transition:transform .25s,box-shadow .25s,border-color .25s;overflow:hidden}
+.world::before{content:'';position:absolute;inset:0;opacity:.14;pointer-events:none;
+  background:radial-gradient(400px 200px at 20% 0%, var(--wc,transparent), transparent 70%)}
+.world:hover{transform:translateY(-5px);border-color:var(--wc);box-shadow:0 12px 34px rgba(0,0,0,.5)}
+.world.locked{cursor:not-allowed;filter:grayscale(.85);opacity:.55}
+.world .icon{font-size:2.2rem;margin-bottom:10px}
+.world h3{font-size:1.12rem;margin-bottom:6px;color:var(--text)}
+.world p{font-size:.85rem;color:var(--text-dim);line-height:1.5;margin-bottom:12px}
+.world .tag{font-size:.72rem;letter-spacing:1px;color:var(--wc);border:1px solid var(--wc);
+  border-radius:999px;padding:3px 10px;display:inline-block}
+.world .status{position:absolute;top:14px;right:16px;font-size:1.2rem}
+/* ===== Escenarios ===== */
+.esc-head{display:flex;align-items:center;gap:14px;margin-bottom:14px;flex-wrap:wrap}
+.esc-head .back{cursor:pointer;color:var(--text-dim);border:1px solid var(--glass-border);
+  border-radius:10px;padding:8px 14px;background:rgba(255,255,255,.05);transition:.25s;font-size:.85rem}
+.esc-head .back:hover{color:var(--text);border-color:var(--cyan)}
+.esc-head h2{font-size:1.5rem}
+.esc-head .chip{margin-left:auto;font-size:.78rem;color:var(--text-dim)}
+.panel{backdrop-filter:blur(12px);background:var(--bg-panel);border:1px solid var(--glass-border);
+  border-radius:20px;padding:20px;margin-bottom:18px}
+.grid2{display:grid;grid-template-columns:1.25fr 1fr;gap:18px}
+@media(max-width:900px){.grid2{grid-template-columns:1fr}}
+.canvas-holder{position:relative;border-radius:16px;overflow:hidden;border:1px solid var(--glass-border);
+  background:radial-gradient(500px 300px at 50% 0%,rgba(34,211,238,.08),transparent),#060D24;min-height:380px}
+.canvas-holder canvas{display:block;width:100%!important;height:100%!important}
+.canvas-hint{position:absolute;bottom:10px;left:12px;font-size:.72rem;color:var(--text-dim);
+  background:rgba(4,10,30,.7);padding:4px 10px;border-radius:8px;pointer-events:none}
+.ctrl-row{display:flex;align-items:center;gap:12px;margin:10px 0;flex-wrap:wrap}
+.ctrl-row label{font-size:.85rem;color:var(--text-dim);min-width:88px}
+input[type=range]{flex:1;accent-color:var(--cyan);height:6px}
+.readout{font-size:.9rem;background:rgba(255,255,255,.05);border:1px solid var(--glass-border);
+  border-radius:12px;padding:12px 14px;line-height:1.9}
+.readout b{color:var(--cyan)}
+.theory{font-size:.92rem;line-height:1.7;color:var(--text-dim)}
+.theory b, .theory strong{color:var(--text)}
+.formula-box{background:rgba(34,211,238,.07);border-left:3px solid var(--cyan);
+  border-radius:0 12px 12px 0;padding:12px 16px;margin:12px 0;font-size:.95rem;overflow-x:auto}
+/* ===== Quiz ===== */
+.qcard{border:1px solid var(--glass-border);border-radius:16px;padding:18px;margin-bottom:14px;
+  background:rgba(255,255,255,.03);transition:.3s}
+.qcard .qnum{font-size:.72rem;letter-spacing:2px;color:var(--text-dim);margin-bottom:6px}
+.qcard .qtext{font-size:.98rem;margin-bottom:14px;line-height:1.6}
+.opts{display:grid;gap:9px}
+.opt{padding:11px 15px;border-radius:12px;border:1px solid var(--glass-border);cursor:pointer;
+  background:rgba(255,255,255,.04);font-size:.92rem;transition:.22s;line-height:1.5}
+.opt:hover{border-color:var(--cyan);background:rgba(34,211,238,.08);transform:translateX(3px)}
+.opt.correct{border-color:var(--green);background:rgba(16,185,129,.16);pointer-events:none}
+.opt.wrong{border-color:var(--red);background:rgba(248,113,113,.14);pointer-events:none}
+.opt.disabled{pointer-events:none;opacity:.6}
+.fdback{margin-top:12px;font-size:.86rem;line-height:1.6;padding:12px 14px;border-radius:12px;display:none}
+.fdback.ok{display:block;background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.4);color:#B8F5DF}
+.fdback.no{display:block;background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.4);color:#FFD7D7}
+.score-line{display:flex;align-items:center;gap:14px;margin-top:10px;flex-wrap:wrap}
+.score-line .pill{background:rgba(255,255,255,.06);border:1px solid var(--glass-border);
+  border-radius:999px;padding:7px 16px;font-size:.85rem}
+.pill b{color:var(--gold)}
+/* toast XP */
+#toast{position:fixed;top:84px;right:26px;z-index:99;display:flex;flex-direction:column;gap:8px;pointer-events:none}
+.tnote{background:linear-gradient(95deg,rgba(34,211,238,.95),rgba(167,139,250,.95));color:#04102A;
+  font-weight:800;border-radius:12px;padding:10px 18px;box-shadow:0 8px 22px rgba(0,0,0,.4);
+  animation:pop 1.9s forwards}
+@keyframes pop{0%{opacity:0;transform:translateX(30px)}12%{opacity:1;transform:none}80%{opacity:1}100%{opacity:0;transform:translateY(-14px)}}
+/* minijuego gradiente */
+.dirpad{display:grid;grid-template-columns:repeat(3,60px);grid-template-rows:repeat(3,52px);gap:8px;justify-content:center;margin:12px 0}
+.dirbtn{border-radius:12px;border:1px solid var(--glass-border);background:rgba(255,255,255,.06);
+  color:var(--text);font-size:1.15rem;cursor:pointer;transition:.2s}
+.dirbtn:hover{border-color:var(--green);background:rgba(16,185,129,.14)}
+.dirbtn:disabled{opacity:.35;cursor:not-allowed}
+/* IFA */
+.ifa-tabs{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+.ifa-tab{padding:9px 18px;border-radius:999px;border:1px solid var(--glass-border);cursor:default;
+  font-size:.82rem;color:var(--text-dim);background:rgba(255,255,255,.04)}
+.ifa-tab.on{color:#051026;font-weight:800;background:linear-gradient(95deg,var(--gold),var(--orange));border-color:transparent}
+/* certificado */
+#certCanvas{width:100%;max-width:860px;border-radius:14px;border:1px solid var(--gold);display:block;margin:16px auto;box-shadow:0 12px 40px rgba(251,191,36,.2)}
+.center{text-align:center}
+footer{margin-top:44px;text-align:center;color:var(--text-dim);font-size:.8rem;letter-spacing:.4px}
+footer b{color:var(--cyan)}
+.confetti{position:fixed;inset:0;pointer-events:none;z-index:200}
+</style>
+</head>
+<body>
+<canvas id="stars"></canvas>
+<div class="wrap">
+
+<!-- HUD -->
+<div id="hud">
+  <div class="avatar" id="hudAvatar">∂</div>
+  <div>
+    <div class="pname" id="hudName">Explorador</div>
+    <div class="lvl" id="hudLvl">Nivel 1 · Aprendiz de Superficies</div>
+  </div>
+  <div class="xpbar"><div id="xpFill"></div></div>
+  <div class="xpnum" id="xpNum">0 XP</div>
+  <div class="medals">
+    <div class="medal" id="med1" title="Valle de los Cortes">⛰️</div>
+    <div class="medal" id="med2" title="Forja Simbólica">⚒️</div>
+    <div class="medal" id="med3" title="Observatorio del Plano Tangente">🔭</div>
+    <div class="medal" id="med4" title="Cumbre del Gradiente">🧭</div>
+    <div class="medal" id="med5" title="Reto Final IFA">🏆</div>
+  </div>
+  <button class="hudbtn" onclick="game.goMap()">🗺️ Mapa</button>
+  <button class="hudbtn" onclick="game.reset()" title="Borra el progreso guardado">↺ Reiniciar</button>
+</div>
+<!-- ============ PANTALLA INICIO ============ -->
+<section class="screen active" id="scr-inicio">
+  <span class="kicker">CÁLCULO MULTIVARIADO · UCOMPENSAR</span>
+  <h1 class="title">Expedición ∂<br>El Mundo de las Derivadas Parciales</h1>
+  <p class="subtitle">Cuatro escenarios 3D, retos de dominio y una prueba final IFA.
+  Explora superficies reales, corta planos, construye tangentes y escala montañas siguiendo el gradiente.
+  Gana XP, colecciona medallas y obtén tu certificado de expedición.</p>
+  <div class="namebox">
+    <input id="playerName" type="text" maxlength="40" placeholder="Escribe tu nombre de explorador(a)">
+    <button class="btn" onclick="game.start()">🚀 Iniciar</button>
+  </div>
+  <div class="feat-row">
+    <div class="feat"><b>🌐 Mundo 3D real</b>Superficies interactivas que puedes rotar, cortar y recorrer.</div>
+    <div class="feat"><b>🎯 Dominio 70%</b>Cada escenario se supera demostrando dominio, no solo avanzando.</div>
+    <div class="feat"><b>🏅 Gamificación</b>XP, niveles, medallas y racha de aciertos con bonificación.</div>
+    <div class="feat"><b>📜 Certificado IFA</b>Interpreta · Formula · Argumenta. 9/12 o más desbloquea tu certificado.</div>
+  </div>
+</section>
+
+<!-- ============ MAPA ============ -->
+<section class="screen" id="scr-mapa">
+  <h2 style="font-size:1.6rem">🗺️ Mapa de la Expedición</h2>
+  <p class="theory" style="margin-top:6px">Supera cada escenario con al menos <b>70% de aciertos</b> para forjar su medalla y desbloquear el siguiente.
+  El Reto Final IFA se abre al reunir las cuatro medallas.
+  <label style="margin-left:10px;cursor:pointer;color:var(--violet)"><input type="checkbox" id="freeMode" onchange="game.toggleFree()"> Modo exploración libre (docente)</label></p>
+  <div class="map-grid">
+    <div class="world" id="w1" style="--wc:var(--cyan)" onclick="game.enter(1)">
+      <div class="status" id="st1"></div><div class="icon">⛰️</div>
+      <h3>1 · Valle de los Cortes</h3>
+      <p>Descubre qué significa geométricamente una derivada parcial cortando superficies con planos.</p>
+      <span class="tag">CONCEPTO</span>
+    </div>
+    <div class="world" id="w2" style="--wc:var(--orange)" onclick="game.enter(2)">
+      <div class="status" id="st2"></div><div class="icon">⚒️</div>
+      <h3>2 · Forja Simbólica</h3>
+      <p>Domina las reglas de derivación parcial forjando resultados con seis funciones distintas.</p>
+      <span class="tag">CÁLCULO</span>
+    </div>
+    <div class="world" id="w3" style="--wc:var(--violet)" onclick="game.enter(3)">
+      <div class="status" id="st3"></div><div class="icon">🔭</div>
+      <h3>3 · Observatorio del Plano Tangente</h3>
+      <p>Construye el plano tangente y úsalo como la mejor aproximación lineal de una superficie.</p>
+      <span class="tag">LINEALIZACIÓN</span>
+    </div>
+    <div class="world" id="w4" style="--wc:var(--green)" onclick="game.enter(4)">
+      <div class="status" id="st4"></div><div class="icon">🧭</div>
+      <h3>4 · Cumbre del Gradiente</h3>
+      <p>Sigue el vector gradiente en un terreno montañoso y alcanza la cumbre por la ruta de máximo ascenso.</p>
+      <span class="tag">GRADIENTE</span>
+    </div>
+    <div class="world" id="w5" style="--wc:var(--gold)" onclick="game.enter(5)">
+      <div class="status" id="st5"></div><div class="icon">🏆</div>
+      <h3>Reto Final · Evaluación IFA</h3>
+      <p>12 desafíos tipo ICFES: Interpreta, Formula y Argumenta. Obtén 9/12 o más y descarga tu certificado.</p>
+      <span class="tag">EVALUACIÓN</span>
+    </div>
+  </div>
+</section>
+
+<!-- ============ ESCENARIO 1 ============ -->
+<section class="screen" id="scr-e1">
+  <div class="esc-head">
+    <div class="back" onclick="game.goMap()">← Mapa</div>
+    <h2 style="color:var(--cyan)">⛰️ Valle de los Cortes</h2>
+    <span class="chip">Concepto geométrico de ∂f/∂x y ∂f/∂y</span>
+  </div>
+  <div class="grid2">
+    <div class="panel" style="padding:0">
+      <div class="canvas-holder" id="cv1holder"><div class="canvas-hint">🖱️ Arrastra para rotar · Rueda para acercar</div></div>
+    </div>
+    <div class="panel">
+      <p class="theory"><b>Misión:</b> la superficie del valle es
+      \( f(x,y)=3\,\sin x \cos y \). Para entender cómo cambia \(f\), la cortamos con un plano.
+      Al fijar \(y=b\) (plano naranja) la superficie se reduce a una <b>curva de una sola variable</b>;
+      la pendiente de su recta tangente en \(x=a\) es exactamente \( \dfrac{\partial f}{\partial x}(a,b) \).
+      Lo mismo ocurre al fijar \(x=a\) (plano violeta) con \( \dfrac{\partial f}{\partial y}(a,b) \).</p>
+      <div class="formula-box">\[ \frac{\partial f}{\partial x}(a,b)=\lim_{h\to 0}\frac{f(a+h,b)-f(a,b)}{h} \]</div>
+      <div class="ctrl-row"><label>Punto \(a\) (x)</label><input type="range" id="e1x" min="-3" max="3" step="0.1" value="0.8"></div>
+      <div class="ctrl-row"><label>Punto \(b\) (y)</label><input type="range" id="e1y" min="-3" max="3" step="0.1" value="0.5"></div>
+      <div class="ctrl-row"><label>Mostrar</label>
+        <label style="min-width:0"><input type="checkbox" id="e1cx" checked> Corte \(y=b\)</label>
+        <label style="min-width:0"><input type="checkbox" id="e1cy" checked> Corte \(x=a\)</label>
+        <label style="min-width:0"><input type="checkbox" id="e1tg" checked> Tangentes</label>
+      </div>
+      <div class="readout" id="e1read"></div>
+    </div>
+  </div>
+  <div class="panel">
+    <h3 style="margin-bottom:12px">🎯 Retos del Valle <span class="chip">(3/4 para la medalla)</span></h3>
+    <div id="quiz-e1"></div>
+    <div class="score-line" id="scoreline-e1"></div>
+  </div>
+</section>
+
+<!-- ============ ESCENARIO 2 ============ -->
+<section class="screen" id="scr-e2">
+  <div class="esc-head">
+    <div class="back" onclick="game.goMap()">← Mapa</div>
+    <h2 style="color:var(--orange)">⚒️ Forja Simbólica</h2>
+    <span class="chip">Cálculo de derivadas parciales</span>
+  </div>
+  <div class="grid2">
+    <div class="panel">
+      <p class="theory"><b>Regla de oro de la forja:</b> al calcular \( \partial f/\partial x \),
+      la variable \(y\) se congela como si fuera una <b>constante</b> (y viceversa).
+      Todas las reglas del cálculo de una variable —producto, cociente, cadena— siguen vigentes.</p>
+      <div class="formula-box">
+        \( f(x,y)=x^2 y^3 \;\Rightarrow\; \dfrac{\partial f}{\partial x}=2x\,y^3, \quad \dfrac{\partial f}{\partial y}=3x^2 y^2 \)
+      </div>
+      <p class="theory">A la derecha ves la superficie de la función de cada reto: observa cómo su geometría
+      refleja el comportamiento de sus derivadas. Cada acierto forja +100 XP; tres aciertos seguidos activan
+      <b style="color:var(--gold)">bonificación de racha</b>.</p>
+    </div>
+    <div class="panel" style="padding:0">
+      <div class="canvas-holder" id="cv2holder" style="min-height:300px"><div class="canvas-hint">Superficie del reto actual</div></div>
+    </div>
+  </div>
+  <div class="panel">
+    <h3 style="margin-bottom:12px">🎯 Retos de la Forja <span class="chip">(5/6 para la medalla)</span></h3>
+    <div id="quiz-e2"></div>
+    <div class="score-line" id="scoreline-e2"></div>
+  </div>
+</section>
+
+<!-- ============ ESCENARIO 3 ============ -->
+<section class="screen" id="scr-e3">
+  <div class="esc-head">
+    <div class="back" onclick="game.goMap()">← Mapa</div>
+    <h2 style="color:var(--violet)">🔭 Observatorio del Plano Tangente</h2>
+    <span class="chip">Linealización de superficies</span>
+  </div>
+  <div class="grid2">
+    <div class="panel" style="padding:0">
+      <div class="canvas-holder" id="cv3holder"><div class="canvas-hint">🖱️ Arrastra para rotar · Rueda para acercar</div></div>
+    </div>
+    <div class="panel">
+      <p class="theory"><b>Misión:</b> sobre la colina \( f(x,y)=8-\dfrac{x^2}{2}-\dfrac{y^2}{2} \)
+      instalamos una plataforma plana: el <b>plano tangente</b>. Cerca del punto de contacto,
+      el plano y la superficie son casi indistinguibles: por eso es la mejor
+      <b>aproximación lineal</b> de \(f\).</p>
+      <div class="formula-box">\[ z = f(a,b) + f_x(a,b)\,(x-a) + f_y(a,b)\,(y-b) \]</div>
+      <div class="ctrl-row"><label>Punto \(a\) (x)</label><input type="range" id="e3x" min="-2.5" max="2.5" step="0.1" value="1"></div>
+      <div class="ctrl-row"><label>Punto \(b\) (y)</label><input type="range" id="e3y" min="-2.5" max="2.5" step="0.1" value="1"></div>
+      <div class="readout" id="e3read"></div>
+    </div>
+  </div>
+  <div class="panel">
+    <h3 style="margin-bottom:12px">🎯 Retos del Observatorio <span class="chip">(3/4 para la medalla)</span></h3>
+    <div id="quiz-e3"></div>
+    <div class="score-line" id="scoreline-e3"></div>
+  </div>
+</section>
+
+<!-- ============ ESCENARIO 4 ============ -->
+<section class="screen" id="scr-e4">
+  <div class="esc-head">
+    <div class="back" onclick="game.goMap()">← Mapa</div>
+    <h2 style="color:var(--green)">🧭 Cumbre del Gradiente</h2>
+    <span class="chip">Vector gradiente y máximo ascenso</span>
+  </div>
+  <div class="grid2">
+    <div class="panel" style="padding:0">
+      <div class="canvas-holder" id="cv4holder"><div class="canvas-hint">🖱️ Arrastra para rotar · Rueda para acercar</div></div>
+    </div>
+    <div class="panel">
+      <p class="theory"><b>Misión:</b> el vector gradiente
+      \( \nabla f=(f_x,\,f_y) \) reúne las dos derivadas parciales y apunta,
+      en cada punto, hacia la dirección de <b>máximo crecimiento</b> de \(f\);
+      su magnitud es la máxima razón de cambio. La flecha dorada del terreno lo muestra en vivo.</p>
+      <div class="formula-box">\( D_{\vec u}f = \nabla f \cdot \vec u = \lVert\nabla f\rVert\cos\theta \)</div>
+      <h3 style="margin:8px 0 4px;font-size:1rem">🎮 Minijuego: Asciende a la cumbre</h3>
+      <p class="theory">Desde el campamento base, elige en cada paso la dirección que más eleve tu altitud
+      (la que mejor se alinee con \(\nabla f\)). Tienes <b>6 pasos</b>: cada elección óptima suma +80 XP.</p>
+      <div class="dirpad">
+        <span></span><button class="dirbtn" id="dN" onclick="e4move(0,1)">▲<br><small style="font-size:.55rem">+y</small></button><span></span>
+        <button class="dirbtn" id="dW" onclick="e4move(-1,0)">◀<br><small style="font-size:.55rem">−x</small></button>
+        <button class="dirbtn" id="dC" onclick="e4restart()" title="Reiniciar ascenso">⛺</button>
+        <button class="dirbtn" id="dE" onclick="e4move(1,0)">▶<br><small style="font-size:.55rem">+x</small></button>
+        <span></span><button class="dirbtn" id="dS" onclick="e4move(0,-1)">▼<br><small style="font-size:.55rem">−y</small></button><span></span>
+      </div>
+      <div class="readout" id="e4read"></div>
+    </div>
+  </div>
+  <div class="panel">
+    <h3 style="margin-bottom:12px">🎯 Retos de la Cumbre <span class="chip">(3/4 para la medalla)</span></h3>
+    <div id="quiz-e4"></div>
+    <div class="score-line" id="scoreline-e4"></div>
+  </div>
+</section>
+
+<!-- ============ RETO FINAL IFA ============ -->
+<section class="screen" id="scr-e5">
+  <div class="esc-head">
+    <div class="back" onclick="game.goMap()">← Mapa</div>
+    <h2 style="color:var(--gold)">🏆 Reto Final · Evaluación IFA</h2>
+    <span class="chip">Alineada a competencias ICFES</span>
+  </div>
+  <div class="panel">
+    <div class="ifa-tabs">
+      <span class="ifa-tab on">🔎 Interpreta (4)</span>
+      <span class="ifa-tab on">🧮 Formula (4)</span>
+      <span class="ifa-tab on">💬 Argumenta (4)</span>
+    </div>
+    <p class="theory">Responde los 12 desafíos. Con <b style="color:var(--gold)">9 o más aciertos</b> forjas la
+    medalla final y desbloqueas tu <b>Certificado de Expedición</b> descargable. Cada ítem tiene un solo intento: lee con calma.</p>
+    <div id="quiz-e5" style="margin-top:14px"></div>
+    <div class="score-line" id="scoreline-e5"></div>
+    <div class="center" id="certZone" style="display:none;margin-top:18px">
+      <h3 style="color:var(--gold);margin-bottom:6px">🎖️ ¡Expedición completada!</h3>
+      <canvas id="certCanvas" width="1400" height="990"></canvas>
+      <button class="btn gold" onclick="downloadCert()">⬇️ Descargar certificado (PNG)</button>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <b>Expedición ∂ · Derivadas Parciales</b> — Cálculo Multivariado<br>
+  Creada por Astrid Bolívar, Ciencias Básicas UCompensar
+</footer>
+</div>
+<div id="toast"></div>
+<canvas class="confetti" id="confetti"></canvas>
+<script>
+/* ==================== NÚCLEO DEL JUEGO ==================== */
+const LS_KEY = 'expedicion_derivadas_parciales_v1';
+const LEVELS = [
+  [0,'Aprendiz de Superficies'],[400,'Cartógrafo de Cortes'],[900,'Forjador Simbólico'],
+  [1500,'Arquitecto Tangente'],[2200,'Guía del Gradiente'],[3000,'Maestro ∂ Multivariado']
+];
+const game = {
+  state:{name:'',xp:0,medals:[false,false,false,false,false],answered:{},scores:{e1:0,e2:0,e3:0,e4:0,e5:0},
+         done:{e1:0,e2:0,e3:0,e4:0,e5:0},streak:0,free:false,ifaByComp:{I:0,F:0,A:0}},
+  save(){ try{localStorage.setItem(LS_KEY,JSON.stringify(this.state));}catch(e){} },
+  load(){ try{const s=localStorage.getItem(LS_KEY); if(s) this.state={...this.state,...JSON.parse(s)};}catch(e){} },
+  start(){
+    const n=document.getElementById('playerName').value.trim();
+    if(!n){ toast('✏️ Escribe tu nombre para comenzar'); return; }
+    this.state.name=n; this.save(); this.boot();
+  },
+  boot(){
+    document.getElementById('hud').style.display='flex';
+    document.getElementById('hudName').textContent=this.state.name;
+    document.getElementById('hudAvatar').textContent=this.state.name.charAt(0).toUpperCase()||'∂';
+    document.getElementById('freeMode').checked=this.state.free;
+    this.refreshHUD(); this.goMap();
+  },
+  toggleFree(){ this.state.free=document.getElementById('freeMode').checked; this.save(); this.refreshMap(); },
+  addXP(n){
+    this.state.xp+=n; this.save(); this.refreshHUD();
+    toast('⭐ +'+n+' XP');
+  },
+  level(){
+    let li=0; LEVELS.forEach((L,i)=>{ if(this.state.xp>=L[0]) li=i; });
+    return li;
+  },
+  refreshHUD(){
+    const li=this.level(), cur=LEVELS[li][0], next=LEVELS[Math.min(li+1,LEVELS.length-1)][0];
+    const pct = li>=LEVELS.length-1 ? 100 : Math.min(100,100*(this.state.xp-cur)/(next-cur));
+    document.getElementById('xpFill').style.width=pct+'%';
+    document.getElementById('xpNum').textContent=this.state.xp+' XP';
+    document.getElementById('hudLvl').textContent='Nivel '+(li+1)+' · '+LEVELS[li][1];
+    this.state.medals.forEach((m,i)=>document.getElementById('med'+(i+1)).classList.toggle('won',m));
+  },
+  unlocked(i){
+    if(this.state.free) return true;
+    if(i===1) return true;
+    if(i===5) return this.state.medals.slice(0,4).every(Boolean);
+    return this.state.medals[i-2];
+  },
+  refreshMap(){
+    for(let i=1;i<=5;i++){
+      const w=document.getElementById('w'+i), st=document.getElementById('st'+i);
+      const un=this.unlocked(i);
+      w.classList.toggle('locked',!un);
+      st.textContent = this.state.medals[i-1] ? '🏅' : (un?'🔓':'🔒');
+    }
+  },
+  show(id){
+    document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    window.scrollTo({top:0,behavior:'smooth'});
+  },
+  goMap(){ this.refreshMap(); this.show('scr-mapa'); },
+  enter(i){
+    if(!this.unlocked(i)){ toast(i===5?'🔒 Reúne las 4 medallas primero':'🔒 Supera el escenario anterior'); return; }
+    this.show('scr-e'+i);
+    renderQuiz('e'+i);
+    if(i===1) initScene1(); if(i===2) initScene2(); if(i===3) initScene3(); if(i===4){ initScene4(); e4restart(true); }
+    if(window.MathJax && MathJax.typesetPromise) MathJax.typesetPromise();
+  },
+  reset(){
+    if(!confirm('¿Borrar todo el progreso guardado y reiniciar la expedición?')) return;
+    localStorage.removeItem(LS_KEY); location.reload();
+  }
+};
+function toast(msg){
+  const t=document.createElement('div'); t.className='tnote'; t.textContent=msg;
+  document.getElementById('toast').appendChild(t); setTimeout(()=>t.remove(),1950);
+}
+
+/* ==================== BANCOS DE PREGUNTAS ==================== */
+/* Cada pregunta: {q, opts[], ok(indice correcto), fb(retroalimentación)} */
+const BANK = {
+e1:[
+ {q:'Geométricamente, \\( \\dfrac{\\partial f}{\\partial x}(a,b) \\) es…',
+  opts:['La pendiente de la recta tangente a la curva que resulta de cortar la superficie con el plano \\(y=b\\), evaluada en \\(x=a\\)',
+        'El área bajo la superficie sobre el punto \\((a,b)\\)',
+        'La altura de la superficie en el punto \\((a,b)\\)',
+        'La pendiente de la curva de corte \\(x=a\\)'],
+  ok:0, fb:'Al fijar \\(y=b\\), la superficie se convierte en la curva \\(g(x)=f(x,b)\\); la derivada parcial es su pendiente en \\(x=a\\). El corte \\(x=a\\) corresponde a \\(\\partial f/\\partial y\\).'},
+ {q:'Si \\( f_x(a,b) > 0 \\), al desplazarnos desde \\((a,b)\\) en la dirección positiva del eje \\(x\\) (con \\(y\\) fijo), el valor de \\(f\\)…',
+  opts:['Aumenta','Disminuye','Permanece constante','No se puede saber sin conocer \\(f_y\\)'],
+  ok:0, fb:'El signo de la derivada parcial indica crecimiento en esa dirección: positiva ⇒ la superficie sube al avanzar en \\(+x\\). El valor de \\(f_y\\) es irrelevante porque \\(y\\) está fijo.'},
+ {q:'Al calcular \\( \\dfrac{\\partial f}{\\partial y} \\), la variable \\(x\\) se trata como…',
+  opts:['Una constante','Una función de \\(y\\)','Cero','La variable de derivación'],
+  ok:0, fb:'Esa es la esencia de la derivación parcial: se congela toda variable distinta a la de derivación y se aplican las reglas usuales de una variable.'},
+ {q:'Para la superficie del valle \\( f(x,y)=3\\sin x\\cos y \\), el valor de \\( f_x(0,0) \\) es…',
+  opts:['3','0','−3','1'],
+  ok:0, fb:'\\( f_x = 3\\cos x\\cos y \\). Evaluando: \\( f_x(0,0)=3\\cos 0\\cos 0 = 3 \\). Puedes verificarlo con la tangente cian del simulador en \\((0,0)\\).'}
+],
+e2:[
+ {f:'x3y2', q:'Forja \\( \\dfrac{\\partial f}{\\partial x} \\) para \\( f(x,y)=x^3y^2 \\)',
+  opts:['\\(3x^2y^2\\)','\\(3x^2y\\)','\\(2x^3y\\)','\\(6xy\\)'],
+  ok:0, fb:'Con \\(y^2\\) constante: \\( \\partial_x(x^3)\\cdot y^2 = 3x^2y^2 \\). La opción \\(2x^3y\\) es \\(f_y\\), no \\(f_x\\).'},
+ {f:'poly', q:'Forja \\( \\dfrac{\\partial f}{\\partial y} \\) para \\( f(x,y)=x^2+5xy-y^3 \\)',
+  opts:['\\(5x-3y^2\\)','\\(2x+5y-3y^2\\)','\\(5y-3y^2\\)','\\(2x+5x\\)'],
+  ok:0, fb:'Término a término: \\(x^2\\) es constante (aporta 0), \\(5xy\\) aporta \\(5x\\), y \\(-y^3\\) aporta \\(-3y^2\\).'},
+ {f:'exy', q:'Forja \\( \\dfrac{\\partial f}{\\partial x} \\) para \\( f(x,y)=e^{xy} \\)',
+  opts:['\\(y\\,e^{xy}\\)','\\(e^{xy}\\)','\\(x\\,e^{xy}\\)','\\(xy\\,e^{xy-1}\\)'],
+  ok:0, fb:'Regla de la cadena: la derivada del exponente \\(xy\\) respecto a \\(x\\) es \\(y\\), luego \\(f_x = y\\,e^{xy}\\). La última opción confunde la regla de potencias con la exponencial.'},
+ {f:'sinx2y', q:'Forja \\( \\dfrac{\\partial f}{\\partial y} \\) para \\( f(x,y)=\\sin(x^2y) \\)',
+  opts:['\\(x^2\\cos(x^2y)\\)','\\(\\cos(x^2y)\\)','\\(2xy\\cos(x^2y)\\)','\\(-x^2\\cos(x^2y)\\)'],
+  ok:0, fb:'Cadena: \\( \\partial_y(x^2y)=x^2 \\), entonces \\( f_y = x^2\\cos(x^2y) \\). La opción \\(2xy\\cos(x^2y)\\) corresponde a \\(f_x\\).'},
+ {f:'lnx2y2', q:'Forja \\( \\dfrac{\\partial f}{\\partial x} \\) para \\( f(x,y)=\\ln(x^2+y^2) \\)',
+  opts:['\\(\\dfrac{2x}{x^2+y^2}\\)','\\(\\dfrac{1}{x^2+y^2}\\)','\\(\\dfrac{2x+2y}{x^2+y^2}\\)','\\(\\dfrac{1}{2x}\\)'],
+  ok:0, fb:'\\( (\\ln u)\' = u\'/u \\) con \\(u=x^2+y^2\\) y \\( \\partial_x u = 2x \\). El término \\(2y\\) no aparece porque \\(y\\) está congelada.'},
+ {f:'xdivy', q:'Forja \\( \\dfrac{\\partial f}{\\partial y} \\) para \\( f(x,y)=\\dfrac{x}{y} \\)',
+  opts:['\\(-\\dfrac{x}{y^2}\\)','\\(\\dfrac{1}{y}\\)','\\(\\dfrac{x}{y^2}\\)','\\(-\\dfrac{1}{y^2}\\)'],
+  ok:0, fb:'Escribe \\( f = x\\,y^{-1} \\): con \\(x\\) constante, \\( f_y = x\\cdot(-1)y^{-2} = -x/y^2 \\).'}
+],
+e3:[
+ {q:'El plano tangente a \\( z=x^2+y^2 \\) en el punto \\((1,1,2)\\) es…',
+  opts:['\\(z=2x+2y-2\\)','\\(z=2x+2y\\)','\\(z=x+y\\)','\\(z=2x+2y+2\\)'],
+  ok:0, fb:'\\(f(1,1)=2\\), \\(f_x=2x\\Rightarrow 2\\), \\(f_y=2y\\Rightarrow 2\\). Entonces \\(z=2+2(x-1)+2(y-1)=2x+2y-2\\).'},
+ {q:'Cerca del punto de tangencia, el plano tangente es la mejor aproximación ______ de la superficie.',
+  opts:['Lineal (de primer orden)','Cuadrática','Constante','Exacta en todo el dominio'],
+  ok:0, fb:'La linealización \\(L(x,y)=f(a,b)+f_x(a,b)(x-a)+f_y(a,b)(y-b)\\) coincide con \\(f\\) hasta el primer orden; el error crece al alejarse del punto.'},
+ {q:'Si \\( f_x(a,b)=0 \\) y \\( f_y(a,b)=0 \\), el plano tangente en ese punto es…',
+  opts:['Horizontal: \\(z=f(a,b)\\); el punto es crítico','Vertical','Inexistente','Paralelo al plano \\(xz\\)'],
+  ok:0, fb:'Sin pendiente en ninguna dirección coordenada, el plano queda horizontal. Es la condición de punto crítico: candidato a máximo, mínimo o punto de silla.'},
+ {q:'Usando la linealización de \\( f(x,y)=x^2+y^2 \\) en \\((1,1)\\), la aproximación de \\( f(1.1,\\,0.9) \\) es…',
+  opts:['\\(2.0\\)','\\(2.02\\)','\\(1.8\\)','\\(2.2\\)'],
+  ok:0, fb:'\\(L(1.1,0.9)=2+2(0.1)+2(-0.1)=2.0\\). El valor exacto es \\(1.21+0.81=2.02\\): la aproximación lineal comete un error de solo 0.02.'}
+],
+e4:[
+ {q:'Para \\( f(x,y)=x^2y \\), el gradiente en el punto \\((2,1)\\) es…',
+  opts:['\\((4,\\,4)\\)','\\((4,\\,2)\\)','\\((2,\\,4)\\)','\\((4x,\\,x^2)\\)'],
+  ok:0, fb:'\\( \\nabla f=(2xy,\\;x^2) \\). Evaluando en \\((2,1)\\): \\((2\\cdot2\\cdot1,\\;2^2)=(4,4)\\). La última opción no está evaluada.'},
+ {q:'En cada punto, el vector \\( \\nabla f \\) apunta hacia…',
+  opts:['La dirección de máximo crecimiento de \\(f\\)','La dirección de las curvas de nivel','El origen de coordenadas','La dirección de descenso más rápido'],
+  ok:0, fb:'Como \\(D_{\\vec u}f=\\lVert\\nabla f\\rVert\\cos\\theta\\), el máximo se logra con \\(\\theta=0\\): alineado con el gradiente. El descenso más rápido es \\(-\\nabla f\\).'},
+ {q:'Si \\( \\nabla f(P)=(3,4) \\), la máxima razón de cambio de \\(f\\) en \\(P\\) vale…',
+  opts:['5','7','3','12'],
+  ok:0, fb:'Es la magnitud del gradiente: \\( \\lVert(3,4)\\rVert=\\sqrt{9+16}=5 \\).'},
+ {q:'El vector gradiente \\( \\nabla f(P) \\) siempre es ______ a la curva de nivel de \\(f\\) que pasa por \\(P\\).',
+  opts:['Perpendicular','Paralelo','Tangente','Opuesto'],
+  ok:0, fb:'Sobre una curva de nivel \\(f\\) no cambia, así que la derivada direccional a lo largo de ella es 0: el gradiente debe ser ortogonal a esa dirección. Obsérvalo en las curvas del terreno.'}
+],
+e5:[
+ {c:'I', q:'La temperatura de una placa metálica es \\(T(x,y)\\) en °C, con \\(x,y\\) en cm. Si \\( \\dfrac{\\partial T}{\\partial x}(2,3)=-4 \\), la mejor interpretación es:',
+  opts:['Desde el punto (2,3), al avanzar en la dirección \\(+x\\) la temperatura disminuye aproximadamente 4 °C por cada cm','La temperatura en (2,3) es −4 °C','La placa se enfría 4 °C por segundo','La temperatura máxima de la placa es 4 °C'],
+  ok:0, fb:'Una derivada parcial es una razón de cambio instantánea respecto a UNA variable espacial, con la otra fija: −4 °C/cm en dirección \\(+x\\).'},
+ {c:'I', q:'En un modelo de producción \\(P(K,L)\\) (capital, trabajo), que \\( \\dfrac{\\partial P}{\\partial L}>0 \\) significa que:',
+  opts:['Manteniendo el capital fijo, contratar más trabajo aumenta la producción (productividad marginal del trabajo positiva)','La producción siempre crece con el tiempo','El capital no influye en la producción','La empresa tiene utilidades positivas'],
+  ok:0, fb:'La parcial respecto a \\(L\\) mide el efecto marginal del trabajo con \\(K\\) congelado. No dice nada del tiempo, de \\(K\\) ni de las utilidades.'},
+ {c:'I', q:'Si el plano tangente a \\(z=f(x,y)\\) en el punto \\(P\\) resulta horizontal, se puede interpretar que:',
+  opts:['\\(P\\) es un punto crítico: candidato a máximo, mínimo o punto de silla','\\(P\\) es con seguridad un máximo','La función no es diferenciable en \\(P\\)','La superficie es plana en todo su dominio'],
+  ok:0, fb:'Plano horizontal ⇔ \\(f_x=f_y=0\\). Eso solo garantiza punto crítico; clasificarlo exige el criterio de la segunda derivada (hessiano).'},
+ {c:'I', q:'En un mapa topográfico, las curvas de nivel de \\(f\\) están muy juntas alrededor de \\(P\\). Esto indica que en esa zona:',
+  opts:['\\( \\lVert\\nabla f\\rVert \\) es grande: la superficie cambia rápidamente (pendiente fuerte)','El gradiente es cero','La superficie es horizontal','\\(f\\) no está definida'],
+  ok:0, fb:'Curvas de nivel apretadas = poco desplazamiento horizontal para un mismo cambio de altura = gradiente de gran magnitud. Es la lectura clave de todo mapa de contornos.'},
+ {c:'F', q:'Para \\( f(x,y)=x^2y^3 \\), \\( \\dfrac{\\partial f}{\\partial x} \\) es:',
+  opts:['\\(2xy^3\\)','\\(3x^2y^2\\)','\\(2x\\cdot 3y^2\\)','\\(x^2y^3\\ln y\\)'],
+  ok:0, fb:'Con \\(y^3\\) constante: \\(2x\\,y^3\\). La opción \\(3x^2y^2\\) es \\(f_y\\).'},
+ {c:'F', q:'Para \\( f(x,y)=e^{x}\\sin y \\), \\( \\dfrac{\\partial f}{\\partial y} \\) es:',
+  opts:['\\(e^x\\cos y\\)','\\(e^x\\sin y\\)','\\(\\cos y\\)','\\(-e^x\\cos y\\)'],
+  ok:0, fb:'\\(e^x\\) es constante respecto a \\(y\\); la derivada de \\(\\sin y\\) es \\(\\cos y\\).'},
+ {c:'F', q:'Para \\( f(x,y)=x^2y+y^2 \\), la derivada mixta \\( f_{xy}=\\dfrac{\\partial}{\\partial y}\\!\\left(\\dfrac{\\partial f}{\\partial x}\\right) \\) es:',
+  opts:['\\(2x\\)','\\(2xy\\)','\\(2x+2y\\)','\\(2\\)'],
+  ok:0, fb:'Primero \\(f_x=2xy\\); luego derivando respecto a \\(y\\): \\(f_{xy}=2x\\). Verifica que \\(f_y=x^2+2y\\) y \\(f_{yx}=2x\\): coinciden (Clairaut).'},
+ {c:'F', q:'El plano tangente a \\( z=xy \\) en el punto \\((2,3,6)\\) es:',
+  opts:['\\(z=3x+2y-6\\)','\\(z=3x+2y+6\\)','\\(z=2x+3y-6\\)','\\(z=xy-6\\)'],
+  ok:0, fb:'\\(f_x=y\\Rightarrow 3\\), \\(f_y=x\\Rightarrow 2\\), \\(f(2,3)=6\\): \\(z=6+3(x-2)+2(y-3)=3x+2y-6\\).'},
+ {c:'A', q:'¿Por qué, para funciones con segundas derivadas parciales continuas, se cumple \\( f_{xy}=f_{yx} \\)?',
+  opts:['Por el teorema de Clairaut (Schwarz): la continuidad de las segundas parciales garantiza que el orden de derivación no altera el resultado','Porque toda función cumple esa igualdad sin condiciones','Porque \\(x\\) e \\(y\\) son la misma variable','Porque las derivadas mixtas siempre valen cero'],
+  ok:0, fb:'La igualdad NO es incondicional: existen contraejemplos cuando las segundas parciales no son continuas. Clairaut establece la hipótesis exacta que la garantiza.'},
+ {c:'A', q:'El mejor argumento de por qué \\( \\nabla f \\) señala la dirección de máximo ascenso es:',
+  opts:['Porque \\(D_{\\vec u}f=\\lVert\\nabla f\\rVert\\cos\\theta\\) alcanza su máximo cuando \\(\\theta=0\\), es decir, cuando \\(\\vec u\\) apunta como \\(\\nabla f\\)','Porque el gradiente siempre apunta hacia arriba en el eje \\(z\\)','Porque sus componentes son positivas','Porque es perpendicular a la superficie'],
+  ok:0, fb:'El argumento correcto sale del producto punto: \\(D_{\\vec u}f=\\nabla f\\cdot\\vec u\\) con \\(\\lVert\\vec u\\rVert=1\\). El coseno maximiza en \\(\\theta=0\\). El gradiente vive en el plano \\(xy\\), no "apunta hacia arriba".'},
+ {c:'A', q:'¿La existencia de \\(f_x\\) y \\(f_y\\) en un punto garantiza que \\(f\\) sea diferenciable allí?',
+  opts:['No: pueden existir ambas parciales sin diferenciabilidad; una condición suficiente es que las parciales sean continuas en el punto','Sí: dos parciales existentes siempre implican diferenciabilidad','Sí, siempre que las parciales sean distintas de cero','No: la diferenciabilidad exige que las parciales sean iguales entre sí'],
+  ok:0, fb:'En varias variables, existir las parciales solo controla dos direcciones. Hay funciones con parciales en un punto que ni siquiera son continuas allí. Parciales continuas ⇒ diferenciable (condición suficiente).'},
+ {c:'A', q:'Un estudiante deriva \\( f(x,y)=xy^2 \\) respecto a \\(x\\) y escribe \\( f_x=2xy \\), argumentando que "hay que derivar todo". El mejor contraargumento es:',
+  opts:['En la derivación parcial respecto a \\(x\\), la variable \\(y\\) se trata como constante, así que \\(f_x=y^2\\); el estudiante derivó también \\(y\\), que estaba congelada','El resultado correcto es \\(f_x=2y\\) porque \\(x\\) desaparece','El estudiante tiene razón: en varias variables se deriva todo','El resultado correcto es \\(f_x=xy\\) porque se divide entre 2'],
+  ok:0, fb:'Error clásico: aplicar regla del producto derivando ambas variables. Respecto a \\(x\\), el factor \\(y^2\\) es un coeficiente constante: \\(f_x = y^2\\).'}
+]};
+/* Umbrales de medalla por escenario */
+const PASS = { e1:3, e2:5, e3:3, e4:3, e5:9 };
+const MEDAL_IDX = { e1:0, e2:1, e3:2, e4:3, e5:4 };
+const IFA_LBL = { I:'🔎 INTERPRETA', F:'🧮 FORMULA', A:'💬 ARGUMENTA' };
+
+/* ==================== MOTOR DE RETOS ==================== */
+function shuffleOpts(item){
+  const idx=[0,1,2,3].sort(()=>Math.random()-0.5);
+  return { order: idx, okPos: idx.indexOf(item.ok) };
+}
+function renderQuiz(key){
+  const holder=document.getElementById('quiz-'+key); holder.innerHTML='';
+  BANK[key].forEach((item,i)=>{
+    const sh=shuffleOpts(item);
+    const card=document.createElement('div'); card.className='qcard'; card.id=key+'-card-'+i;
+    const tag = item.c ? IFA_LBL[item.c]+' · ' : '';
+    card.innerHTML='<div class="qnum">'+tag+'RETO '+(i+1)+' DE '+BANK[key].length+'</div>'+
+      '<div class="qtext">'+item.q+'</div><div class="opts"></div><div class="fdback"></div>';
+    const optsDiv=card.querySelector('.opts');
+    sh.order.forEach((oi,pos)=>{
+      const b=document.createElement('div'); b.className='opt'; b.innerHTML=item.opts[oi];
+      b.onclick=()=>answer(key,i,pos===sh.okPos,b,card,item);
+      optsDiv.appendChild(b);
+    });
+    const prev=game.state.answered[key+'-'+i];
+    if(prev!==undefined){
+      card.querySelectorAll('.opt').forEach(o=>o.classList.add('disabled'));
+      const fb=card.querySelector('.fdback');
+      fb.className='fdback '+(prev?'ok':'no');
+      fb.innerHTML=(prev?'✅ Resuelto en una sesión anterior. ':'❌ Fallado en una sesión anterior. ')+item.fb;
+    }
+    holder.appendChild(card);
+    if(key==='e2' && prev===undefined && i===nextPendingE2()) showE2Surface(item.f);
+  });
+  refreshScoreLine(key);
+  if(window.MathJax && MathJax.typesetPromise) MathJax.typesetPromise([holder]);
+}
+function nextPendingE2(){
+  for(let i=0;i<BANK.e2.length;i++) if(game.state.answered['e2-'+i]===undefined) return i;
+  return -1;
+}
+function answer(key,i,correct,btn,card,item){
+  if(game.state.answered[key+'-'+i]!==undefined) return;
+  game.state.answered[key+'-'+i]=correct;
+  game.state.done[key]++;
+  card.querySelectorAll('.opt').forEach(o=>o.classList.add('disabled'));
+  const fb=card.querySelector('.fdback');
+  if(correct){
+    btn.classList.add('correct');
+    game.state.scores[key]++;
+    game.state.streak++;
+    let gain = key==='e5' ? 150 : 100;
+    if(game.state.streak>=3){ gain+=25; }
+    fb.className='fdback ok'; fb.innerHTML='✅ ¡Correcto! '+(game.state.streak>=3?'🔥 Racha x'+game.state.streak+' (+25 XP extra). ':'')+item.fb;
+    game.addXP(gain);
+    if(item.c) game.state.ifaByComp[item.c]++;
+  } else {
+    btn.classList.add('wrong');
+    game.state.streak=0;
+    fb.className='fdback no'; fb.innerHTML='❌ No es correcto. '+item.fb;
+    card.querySelectorAll('.opt').forEach((o,pos)=>{ /* marcar la correcta */ });
+  }
+  game.save();
+  refreshScoreLine(key);
+  if(key==='e2'){ const nx=nextPendingE2(); if(nx>=0) showE2Surface(BANK.e2[nx].f); }
+  checkMedal(key);
+  if(window.MathJax && MathJax.typesetPromise) MathJax.typesetPromise([fb]);
+}
+function refreshScoreLine(key){
+  const sl=document.getElementById('scoreline-'+key);
+  const total=BANK[key].length, sc=game.state.scores[key], dn=game.state.done[key];
+  let html='<span class="pill">Aciertos: <b>'+sc+'</b> / '+total+'</span>'+
+           '<span class="pill">Respondidos: '+dn+' / '+total+'</span>'+
+           '<span class="pill">Meta medalla: <b>'+PASS[key]+'</b></span>';
+  if(dn===total && sc<PASS[key]){
+    html+='<button class="btn secondary" style="padding:9px 18px;font-size:.85rem" onclick="retryQuiz(\''+key+'\')">↺ Reintentar retos</button>';
+  }
+  sl.innerHTML=html;
+}
+function retryQuiz(key){
+  BANK[key].forEach((_,i)=>delete game.state.answered[key+'-'+i]);
+  game.state.scores[key]=0; game.state.done[key]=0;
+  if(key==='e5') game.state.ifaByComp={I:0,F:0,A:0};
+  game.save(); renderQuiz(key);
+  toast('↺ Retos reiniciados: ¡a por la medalla!');
+}
+function checkMedal(key){
+  const idx=MEDAL_IDX[key];
+  if(game.state.medals[idx]) { if(key==='e5' && game.state.scores.e5>=PASS.e5 && game.state.done.e5===BANK.e5.length) showCert(); return; }
+  if(game.state.scores[key]>=PASS[key]){
+    game.state.medals[idx]=true;
+    game.addXP(250);
+    game.save(); game.refreshHUD(); confettiBurst();
+    toast('🏅 ¡Medalla forjada! +250 XP');
+    if(key==='e5') showCert();
+  } else if(key==='e5' && game.state.done.e5===BANK.e5.length){
+    toast('📚 Obtuviste '+game.state.scores.e5+'/12. Necesitas 9: revisa la retroalimentación y reintenta.');
+  }
+}
+</script>
+<script>
+/* ==================== MOTOR 3D (Three.js) ==================== */
+const scenes = {};   // registro: {renderer,scene,camera,orbit,holder,anim}
+function makeScene(holderId, camPos){
+  if(scenes[holderId]){ resizeScene(holderId); return scenes[holderId]; }
+  const holder=document.getElementById(holderId);
+  const renderer=new THREE.WebGLRenderer({antialias:true,alpha:true});
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+  holder.prepend(renderer.domElement);
+  const scene=new THREE.Scene();
+  const camera=new THREE.PerspectiveCamera(48,1,0.1,300);
+  camera.position.set(...camPos);
+  scene.add(new THREE.AmbientLight(0xbfd4ff,.55));
+  const d1=new THREE.DirectionalLight(0xffffff,.85); d1.position.set(8,14,6); scene.add(d1);
+  const p1=new THREE.PointLight(0x22d3ee,.5,80); p1.position.set(-10,8,-8); scene.add(p1);
+  const p2=new THREE.PointLight(0xa78bfa,.45,80); p2.position.set(10,6,10); scene.add(p2);
+  const st={renderer,scene,camera,holder,theta:0.9,phi:1.05,radius:camPos[2]===undefined?16:Math.hypot(...camPos),targetY:1.5};
+  attachOrbit(st);
+  scenes[holderId]=st;
+  resizeScene(holderId);
+  (function loop(){ requestAnimationFrame(loop);
+    const r=st.radius, t=st.theta, ph=st.phi;
+    st.camera.position.set(r*Math.sin(ph)*Math.cos(t), r*Math.cos(ph)+st.targetY, r*Math.sin(ph)*Math.sin(t));
+    st.camera.lookAt(0,st.targetY,0);
+    st.renderer.render(st.scene,st.camera);
+  })();
+  window.addEventListener('resize',()=>resizeScene(holderId));
+  return st;
+}
+function resizeScene(id){
+  const st=scenes[id]; if(!st) return;
+  const w=st.holder.clientWidth||600, h=st.holder.clientHeight||380;
+  st.renderer.setSize(w,h); st.camera.aspect=w/h; st.camera.updateProjectionMatrix();
+}
+function attachOrbit(st){
+  const el=st.renderer.domElement; let drag=false,lx=0,ly=0;
+  const down=(x,y)=>{drag=true;lx=x;ly=y};
+  const move=(x,y)=>{ if(!drag)return; st.theta+=(x-lx)*0.008; st.phi=Math.min(1.5,Math.max(0.25,st.phi+(y-ly)*0.006)); lx=x;ly=y; };
+  el.addEventListener('mousedown',e=>down(e.clientX,e.clientY));
+  window.addEventListener('mousemove',e=>move(e.clientX,e.clientY));
+  window.addEventListener('mouseup',()=>drag=false);
+  el.addEventListener('touchstart',e=>{down(e.touches[0].clientX,e.touches[0].clientY)},{passive:true});
+  el.addEventListener('touchmove',e=>{move(e.touches[0].clientX,e.touches[0].clientY)},{passive:true});
+  el.addEventListener('touchend',()=>drag=false);
+  el.addEventListener('wheel',e=>{e.preventDefault(); st.radius=Math.min(45,Math.max(6,st.radius+e.deltaY*0.02));},{passive:false});
+}
+/* Superficie con colores por altura: mapeo mundo (x, f, y) */
+function buildSurface(f,xmin,xmax,ymin,ymax,seg,cLow,cHigh){
+  const g=new THREE.BufferGeometry();
+  const verts=[],cols=[],idx=[];
+  const cl=new THREE.Color(cLow), ch=new THREE.Color(cHigh);
+  let zmin=Infinity,zmax=-Infinity;
+  const zs=[];
+  for(let i=0;i<=seg;i++){ for(let j=0;j<=seg;j++){
+    const x=xmin+(xmax-xmin)*i/seg, y=ymin+(ymax-ymin)*j/seg, z=f(x,y);
+    zs.push(z); if(z<zmin)zmin=z; if(z>zmax)zmax=z;
+  }}
+  let k=0;
+  for(let i=0;i<=seg;i++){ for(let j=0;j<=seg;j++){
+    const x=xmin+(xmax-xmin)*i/seg, y=ymin+(ymax-ymin)*j/seg, z=zs[k++];
+    verts.push(x,z,y);
+    const t=(z-zmin)/((zmax-zmin)||1);
+    const c=cl.clone().lerp(ch,t); cols.push(c.r,c.g,c.b);
+  }}
+  for(let i=0;i<seg;i++){ for(let j=0;j<seg;j++){
+    const a=i*(seg+1)+j, b=a+1, c=a+seg+1, d=c+1;
+    idx.push(a,c,b, b,c,d);
+  }}
+  g.setIndex(idx);
+  g.setAttribute('position',new THREE.Float32BufferAttribute(verts,3));
+  g.setAttribute('color',new THREE.Float32BufferAttribute(cols,3));
+  g.computeVertexNormals();
+  const mat=new THREE.MeshPhongMaterial({vertexColors:true,side:THREE.DoubleSide,shininess:55,transparent:true,opacity:0.96});
+  const mesh=new THREE.Mesh(g,mat);
+  const wire=new THREE.LineSegments(new THREE.WireframeGeometry(g),
+    new THREE.LineBasicMaterial({color:0xffffff,transparent:true,opacity:0.06}));
+  const grp=new THREE.Group(); grp.add(mesh); grp.add(wire);
+  return grp;
+}
+function lineFromPts(pts,color,width){ 
+  const g=new THREE.BufferGeometry().setFromPoints(pts);
+  return new THREE.Line(g,new THREE.LineBasicMaterial({color,linewidth:width||2}));
+}
+
+/* ========== ESCENARIO 1: Valle de los Cortes ========== */
+const f1=(x,y)=>3*Math.sin(x)*Math.cos(y);
+const f1x=(x,y)=>3*Math.cos(x)*Math.cos(y);
+const f1y=(x,y)=>-3*Math.sin(x)*Math.sin(y);
+let e1grp=null;
+function initScene1(){
+  const st=makeScene('cv1holder',[10,9,12]);
+  if(!e1grp){
+    st.scene.add(buildSurface(f1,-3.5,3.5,-3.5,3.5,70,0x0b3a66,0x22d3ee));
+    const grid=new THREE.GridHelper(9,9,0x224477,0x14203f); grid.position.y=-3.4; st.scene.add(grid);
+    e1grp=new THREE.Group(); st.scene.add(e1grp);
+    ['e1x','e1y','e1cx','e1cy','e1tg'].forEach(id=>document.getElementById(id).addEventListener('input',updE1));
+  }
+  updE1();
+}
+function updE1(){
+  if(!e1grp) return;
+  const a=+document.getElementById('e1x').value, b=+document.getElementById('e1y').value;
+  const sx=document.getElementById('e1cx').checked, sy=document.getElementById('e1cy').checked, tg=document.getElementById('e1tg').checked;
+  while(e1grp.children.length) e1grp.remove(e1grp.children[0]);
+  const matO=new THREE.MeshBasicMaterial({color:0xf97316,transparent:true,opacity:0.16,side:THREE.DoubleSide});
+  const matV=new THREE.MeshBasicMaterial({color:0xa78bfa,transparent:true,opacity:0.16,side:THREE.DoubleSide});
+  if(sx){ // plano y=b  -> mundo z=b
+    const pl=new THREE.Mesh(new THREE.PlaneGeometry(7.4,7.4),matO);
+    pl.position.set(0,0.3,b); e1grp.add(pl);
+    const pts=[]; for(let x=-3.5;x<=3.5001;x+=0.07) pts.push(new THREE.Vector3(x,f1(x,b)+0.02,b));
+    e1grp.add(lineFromPts(pts,0xffb066));
+  }
+  if(sy){ // plano x=a
+    const pl=new THREE.Mesh(new THREE.PlaneGeometry(7.4,7.4),matV);
+    pl.rotation.y=Math.PI/2; pl.position.set(a,0.3,0); e1grp.add(pl);
+    const pts=[]; for(let y=-3.5;y<=3.5001;y+=0.07) pts.push(new THREE.Vector3(a,f1(a,y)+0.02,y));
+    e1grp.add(lineFromPts(pts,0xd6bcff));
+  }
+  const z0=f1(a,b);
+  if(tg){
+    const dx=f1x(a,b), dy=f1y(a,b), L=1.6;
+    e1grp.add(lineFromPts([new THREE.Vector3(a-L,z0-L*dx,b),new THREE.Vector3(a+L,z0+L*dx,b)],0x22d3ee));
+    e1grp.add(lineFromPts([new THREE.Vector3(a,z0-L*dy,b-L),new THREE.Vector3(a,z0+L*dy,b+L)],0x10b981));
+  }
+  const mk=new THREE.Mesh(new THREE.SphereGeometry(0.16,20,20),new THREE.MeshBasicMaterial({color:0xfbbf24}));
+  mk.position.set(a,z0,b); e1grp.add(mk);
+  const fx=f1x(a,b), fy=f1y(a,b);
+  document.getElementById('e1read').innerHTML=
+    '📍 Punto: (a, b) = ('+a.toFixed(1)+', '+b.toFixed(1)+') &nbsp;·&nbsp; f(a,b) = <b>'+z0.toFixed(3)+'</b><br>'+
+    '<span style="color:var(--cyan)">∂f/∂x = 3·cos(a)·cos(b) = <b>'+fx.toFixed(3)+'</b></span> → '+(fx>0.01?'la superficie sube en +x ↗':fx<-0.01?'la superficie baja en +x ↘':'tangente horizontal en x —')+'<br>'+
+    '<span style="color:var(--green)">∂f/∂y = −3·sen(a)·sen(b) = <b>'+fy.toFixed(3)+'</b></span> → '+(fy>0.01?'la superficie sube en +y ↗':fy<-0.01?'la superficie baja en +y ↘':'tangente horizontal en y —');
+}
+
+/* ========== ESCENARIO 2: superficie del reto actual ========== */
+const E2F={
+  x3y2:  {f:(x,y)=>x*x*x*y*y/6,        r:2.0, lo:0x4a1d05, hi:0xf97316},
+  poly:  {f:(x,y)=>(x*x+5*x*y-y*y*y)/7,r:2.0, lo:0x4a1d05, hi:0xfb923c},
+  exy:   {f:(x,y)=>Math.exp(x*y)/3-1,  r:1.5, lo:0x431407, hi:0xfdba74},
+  sinx2y:{f:(x,y)=>2*Math.sin(x*x*y),  r:2.0, lo:0x4a1d05, hi:0xf97316},
+  lnx2y2:{f:(x,y)=>1.6*Math.log(x*x+y*y+0.15),r:2.4, lo:0x431407, hi:0xfb923c},
+  xdivy: {f:(x,y)=>x/(y+3.6),          r:2.4, lo:0x4a1d05, hi:0xfdba74}
+};
+let e2cur=null;
+function initScene2(){
+  makeScene('cv2holder',[7,6.5,8.5]);
+  const nx=nextPendingE2();
+  showE2Surface(nx>=0 ? BANK.e2[nx].f : 'x3y2');
+}
+function showE2Surface(key){
+  const st=scenes['cv2holder']; if(!st||!E2F[key]) return;
+  if(e2cur){ st.scene.remove(e2cur); }
+  const d=E2F[key];
+  e2cur=buildSurface(d.f,-d.r,d.r,-d.r,d.r,56,d.lo,d.hi);
+  st.scene.add(e2cur);
+}
+
+/* ========== ESCENARIO 3: Plano tangente ========== */
+const f3=(x,y)=>8-x*x/2-y*y/2;
+let e3grp=null;
+function initScene3(){
+  const st=makeScene('cv3holder',[9,10,11]); st.targetY=4;
+  if(!e3grp){
+    st.scene.add(buildSurface(f3,-3.2,3.2,-3.2,3.2,64,0x2a1060,0xa78bfa));
+    const grid=new THREE.GridHelper(9,9,0x224477,0x14203f); grid.position.y=-1.4; st.scene.add(grid);
+    e3grp=new THREE.Group(); st.scene.add(e3grp);
+    ['e3x','e3y'].forEach(id=>document.getElementById(id).addEventListener('input',updE3));
+  }
+  updE3();
+}
+function updE3(){
+  if(!e3grp) return;
+  const a=+document.getElementById('e3x').value, b=+document.getElementById('e3y').value;
+  while(e3grp.children.length) e3grp.remove(e3grp.children[0]);
+  const z0=f3(a,b), fx=-a, fy=-b;
+  // plano tangente: normal mundo = (-fx, 1, -fy)
+  const n=new THREE.Vector3(-fx,1,-fy).normalize();
+  const pl=new THREE.Mesh(new THREE.PlaneGeometry(4.4,4.4),
+    new THREE.MeshBasicMaterial({color:0xfbbf24,transparent:true,opacity:0.32,side:THREE.DoubleSide}));
+  pl.position.set(a,z0,b);
+  pl.quaternion.setFromUnitVectors(new THREE.Vector3(0,0,1),n);
+  e3grp.add(pl);
+  const edge=new THREE.LineSegments(new THREE.EdgesGeometry(pl.geometry),
+    new THREE.LineBasicMaterial({color:0xfbbf24}));
+  edge.position.copy(pl.position); edge.quaternion.copy(pl.quaternion); e3grp.add(edge);
+  const mk=new THREE.Mesh(new THREE.SphereGeometry(0.15,20,20),new THREE.MeshBasicMaterial({color:0xffffff}));
+  mk.position.set(a,z0,b); e3grp.add(mk);
+  const c0=(8+a*a/2+b*b/2);
+  document.getElementById('e3read').innerHTML=
+    '📍 (a, b) = ('+a.toFixed(1)+', '+b.toFixed(1)+') &nbsp;·&nbsp; f(a,b) = <b>'+z0.toFixed(2)+'</b><br>'+
+    'f<sub>x</sub>(a,b) = −a = <b>'+fx.toFixed(2)+'</b> &nbsp;·&nbsp; f<sub>y</sub>(a,b) = −b = <b>'+fy.toFixed(2)+'</b><br>'+
+    '🟨 Plano tangente: &nbsp; z = '+z0.toFixed(2)+' '+(fx<0?'− ':'+ ')+Math.abs(fx).toFixed(2)+'(x '+(a<0?'+ ':'− ')+Math.abs(a).toFixed(1)+') '+(fy<0?'− ':'+ ')+Math.abs(fy).toFixed(2)+'(y '+(b<0?'+ ':'− ')+Math.abs(b).toFixed(1)+')'+
+    '<br>&nbsp;&nbsp;&nbsp;&nbsp;simplificado: &nbsp; z = '+c0.toFixed(2)+' '+(fx<0?'− ':'+ ')+Math.abs(fx).toFixed(2)+'x '+(fy<0?'− ':'+ ')+Math.abs(fy).toFixed(2)+'y'+
+    (Math.abs(a)<0.05&&Math.abs(b)<0.05?'<br>⭐ ¡Plano horizontal! (0,0) es un punto crítico: la cima de la colina.':'');
+}
+
+/* ========== ESCENARIO 4: Cumbre del Gradiente ========== */
+const g1={cx:1,cy:1,A:5,s:6}, g2={cx:-2.2,cy:-2.2,A:3,s:4};
+const f4=(x,y)=> g1.A*Math.exp(-(((x-g1.cx)**2)+((y-g1.cy)**2))/g1.s) + g2.A*Math.exp(-(((x-g2.cx)**2)+((y-g2.cy)**2))/g2.s);
+const f4x=(x,y)=> g1.A*Math.exp(-(((x-g1.cx)**2)+((y-g1.cy)**2))/g1.s)*(-2*(x-g1.cx)/g1.s)
+                + g2.A*Math.exp(-(((x-g2.cx)**2)+((y-g2.cy)**2))/g2.s)*(-2*(x-g2.cx)/g2.s);
+const f4y=(x,y)=> g1.A*Math.exp(-(((x-g1.cx)**2)+((y-g1.cy)**2))/g1.s)*(-2*(y-g1.cy)/g1.s)
+                + g2.A*Math.exp(-(((x-g2.cx)**2)+((y-g2.cy)**2))/g2.s)*(-2*(y-g2.cy)/g2.s);
+let e4grp=null, e4pos=null, e4steps=0, e4opt=0, e4trail=[];
+function initScene4(){
+  const st=makeScene('cv4holder',[11,10,13]); st.targetY=2;
+  if(!e4grp){
+    st.scene.add(buildSurface(f4,-5,5,-5,5,80,0x06281c,0x34d399));
+    // piso con curvas de nivel (textura canvas)
+    const cv=document.createElement('canvas'); cv.width=cv.height=512;
+    const cx=cv.getContext('2d'); cx.fillStyle='#071528'; cx.fillRect(0,0,512,512);
+    const img=cx.createImageData(512,512);
+    for(let j=0;j<512;j++){ for(let i=0;i<512;i++){
+      const x=-5+10*i/511, y=-5+10*j/511, v=f4(x,y);
+      const band=Math.abs((v*2)%1); const on=band<0.09;
+      const p=(j*512+i)*4;
+      img.data[p]=on?52:7; img.data[p+1]=on?211:21; img.data[p+2]=on?153:40; img.data[p+3]=255;
+    }}
+    cx.putImageData(img,0,0);
+    const tx=new THREE.CanvasTexture(cv);
+    const floor=new THREE.Mesh(new THREE.PlaneGeometry(10,10),
+      new THREE.MeshBasicMaterial({map:tx,transparent:true,opacity:0.85}));
+    floor.rotation.x=-Math.PI/2; floor.position.y=-0.6; st.scene.add(floor);
+    e4grp=new THREE.Group(); st.scene.add(e4grp);
+  }
+}
+function e4draw(){
+  while(e4grp.children.length) e4grp.remove(e4grp.children[0]);
+  const [x,y]=e4pos, z=f4(x,y);
+  const mk=new THREE.Mesh(new THREE.SphereGeometry(0.22,20,20),new THREE.MeshBasicMaterial({color:0xffffff}));
+  mk.position.set(x,z+0.15,y); e4grp.add(mk);
+  const gx=f4x(x,y), gy=f4y(x,y), gm=Math.hypot(gx,gy);
+  if(gm>1e-4){
+    const dir=new THREE.Vector3(gx,0,gy).normalize();
+    e4grp.add(new THREE.ArrowHelper(dir,new THREE.Vector3(x,z+0.2,y),Math.min(2.4,gm*1.2+0.6),0xfbbf24,0.35,0.2));
+  }
+  if(e4trail.length>1){
+    e4grp.add(lineFromPts(e4trail.map(p=>new THREE.Vector3(p[0],f4(p[0],p[1])+0.1,p[1])),0xffffff));
+  }
+  const peak=f4(g1.cx,g1.cy);
+  document.getElementById('e4read').innerHTML=
+    '🥾 Paso '+e4steps+' / 6 &nbsp;·&nbsp; Óptimos: <b>'+e4opt+'</b><br>'+
+    '📍 Posición: ('+x.toFixed(1)+', '+y.toFixed(1)+') &nbsp;·&nbsp; Altitud f = <b>'+z.toFixed(2)+'</b> / '+peak.toFixed(2)+'<br>'+
+    '🧭 ∇f = ('+gx.toFixed(2)+', '+gy.toFixed(2)+') &nbsp;·&nbsp; ‖∇f‖ = '+gm.toFixed(2)+
+    (e4steps>=6 ? '<br><b style="color:var(--gold)">🏁 Ascenso terminado: '+e4opt+' de 6 decisiones óptimas.'+(e4opt>=5?' ¡Ruta de gradiente magistral!':' Observa la flecha dorada y reintenta.')+'</b>' : '');
+}
+function e4restart(silent){
+  e4pos=[-3.8,3.4]; e4steps=0; e4opt=0; e4trail=[[...e4pos]];
+  ['dN','dS','dE','dW'].forEach(id=>document.getElementById(id).disabled=false);
+  if(!silent) toast('⛺ De vuelta al campamento base');
+  if(e4grp) e4draw();
+}
+function e4move(dx,dy){
+  if(e4steps>=6) return;
+  const h=0.9, [x,y]=e4pos;
+  const gains={ E:f4(x+h,y)-f4(x,y), W:f4(x-h,y)-f4(x,y), N:f4(x,y+h)-f4(x,y), S:f4(x,y-h)-f4(x,y) };
+  const best=Math.max(gains.E,gains.W,gains.N,gains.S);
+  const chosen = dx===1?gains.E : dx===-1?gains.W : dy===1?gains.N : gains.S;
+  e4pos=[Math.max(-4.8,Math.min(4.8,x+dx*h)), Math.max(-4.8,Math.min(4.8,y+dy*h))];
+  e4trail.push([...e4pos]); e4steps++;
+  if(best-chosen<1e-9){ e4opt++; game.addXP(80); toast('🧭 Dirección óptima: ¡alineado con ∇f!'); }
+  else toast('↪ Había una dirección con mayor ascenso');
+  if(e4steps>=6){
+    ['dN','dS','dE','dW'].forEach(id=>document.getElementById(id).disabled=true);
+    if(e4opt>=5){ game.addXP(100); confettiBurst(); }
+  }
+  e4draw();
+}
+
+/* ==================== CERTIFICADO ==================== */
+function showCert(){
+  const zone=document.getElementById('certZone'); zone.style.display='block';
+  const c=document.getElementById('certCanvas'), x=c.getContext('2d');
+  const W=c.width,H=c.height;
+  const bg=x.createLinearGradient(0,0,W,H);
+  bg.addColorStop(0,'#050B22'); bg.addColorStop(.55,'#0B1436'); bg.addColorStop(1,'#071026');
+  x.fillStyle=bg; x.fillRect(0,0,W,H);
+  // nebulosas
+  const neb=(cx,cy,r,col)=>{const g=x.createRadialGradient(cx,cy,0,cx,cy,r);g.addColorStop(0,col);g.addColorStop(1,'transparent');x.fillStyle=g;x.fillRect(0,0,W,H);};
+  neb(W*0.85,H*0.1,420,'rgba(167,139,250,.20)'); neb(W*0.1,H*0.85,420,'rgba(34,211,238,.18)'); neb(W*0.5,H*0.5,560,'rgba(249,115,22,.07)');
+  // estrellas
+  x.fillStyle='rgba(255,255,255,.7)';
+  for(let i=0;i<120;i++){ x.globalAlpha=Math.random()*0.7+0.1; x.beginPath(); x.arc(Math.random()*W,Math.random()*H,Math.random()*1.6,0,7); x.fill(); }
+  x.globalAlpha=1;
+  // marco
+  x.strokeStyle='#FBBF24'; x.lineWidth=6; x.strokeRect(36,36,W-72,H-72);
+  x.strokeStyle='rgba(251,191,36,.4)'; x.lineWidth=1.5; x.strokeRect(52,52,W-104,H-104);
+  const ctr=t=>{return (W-x.measureText(t).width)/2};
+  x.textBaseline='alphabetic';
+  x.fillStyle='#FBBF24'; x.font='700 30px Segoe UI, sans-serif';
+  x.fillText('FUNDACIÓN UNIVERSITARIA COMPENSAR · CIENCIAS BÁSICAS', ctr('FUNDACIÓN UNIVERSITARIA COMPENSAR · CIENCIAS BÁSICAS'), 130);
+  x.fillStyle='#E8EEFF'; x.font='800 76px Segoe UI, sans-serif';
+  x.fillText('CERTIFICADO DE EXPEDICIÓN', ctr('CERTIFICADO DE EXPEDICIÓN'), 235);
+  x.font='34px Segoe UI, sans-serif'; x.fillStyle='#93A3C8';
+  x.fillText('Se otorga a', ctr('Se otorga a'), 320);
+  const nm=game.state.name||'Explorador(a)';
+  x.font='italic 700 64px Georgia, serif';
+  const grd=x.createLinearGradient(W/2-300,0,W/2+300,0); grd.addColorStop(0,'#22D3EE'); grd.addColorStop(1,'#A78BFA');
+  x.fillStyle=grd; x.fillText(nm, ctr(nm), 415);
+  x.strokeStyle='rgba(147,163,200,.5)'; x.beginPath(); x.moveTo(W/2-330,438); x.lineTo(W/2+330,438); x.stroke();
+  x.fillStyle='#E8EEFF'; x.font='32px Segoe UI, sans-serif';
+  const l1='por completar con éxito la Expedición ∂: Derivadas Parciales de Funciones';
+  const l2='Multivariadas, superando sus cuatro escenarios 3D y la evaluación final IFA.';
+  x.fillText(l1, ctr(l1), 510); x.fillText(l2, ctr(l2), 556);
+  // métricas
+  const bc=game.state.ifaByComp;
+  const stats='Evaluación IFA: '+game.state.scores.e5+' / 12   ·   Interpreta '+bc.I+'/4  ·  Formula '+bc.F+'/4  ·  Argumenta '+bc.A+'/4';
+  x.fillStyle='#FBBF24'; x.font='700 34px Segoe UI, sans-serif';
+  x.fillText(stats, ctr(stats), 640);
+  const lvl='Rango alcanzado: '+LEVELS[game.level()][1]+'   ·   '+game.state.xp+' XP';
+  x.fillStyle='#22D3EE'; x.font='30px Segoe UI, sans-serif';
+  x.fillText(lvl, ctr(lvl), 695);
+  // medallas
+  x.font='54px Segoe UI, sans-serif';
+  const meds='⛰️  ⚒️  🔭  🧭  🏆';
+  x.fillText(meds, ctr(meds), 780);
+  x.fillStyle='#93A3C8'; x.font='26px Segoe UI, sans-serif';
+  const att='Creada por Astrid Bolívar, Ciencias Básicas UCompensar';
+  x.fillText(att, ctr(att), 880);
+  x.font='22px Segoe UI, sans-serif';
+  const c2='Cálculo Multivariado · Competencias Interpreta – Formula – Argumenta (marco ICFES)';
+  x.fillText(c2, ctr(c2), 918);
+}
+function downloadCert(){
+  const a=document.createElement('a');
+  a.download='Certificado_Expedicion_Derivadas_Parciales_'+(game.state.name||'explorador').replace(/\s+/g,'_')+'.png';
+  a.href=document.getElementById('certCanvas').toDataURL('image/png'); a.click();
+}
+
+/* ==================== EFECTOS ==================== */
+function confettiBurst(){
+  const c=document.getElementById('confetti'), x=c.getContext('2d');
+  c.width=innerWidth; c.height=innerHeight;
+  const cols=['#22D3EE','#A78BFA','#F97316','#10B981','#FBBF24'];
+  const ps=Array.from({length:130},()=>({x:innerWidth/2+(Math.random()-0.5)*300,y:innerHeight*0.3,
+    vx:(Math.random()-0.5)*9,vy:-Math.random()*8-3,g:0.22,s:Math.random()*7+3,c:cols[Math.floor(Math.random()*5)],r:Math.random()*6.3}));
+  let t=0;
+  (function anim(){
+    x.clearRect(0,0,c.width,c.height);
+    ps.forEach(p=>{p.x+=p.vx;p.y+=p.vy;p.vy+=p.g;p.r+=0.15;
+      x.save();x.translate(p.x,p.y);x.rotate(p.r);x.fillStyle=p.c;x.fillRect(-p.s/2,-p.s/2,p.s,p.s*0.6);x.restore();});
+    if(++t<110) requestAnimationFrame(anim); else x.clearRect(0,0,c.width,c.height);
+  })();
+}
+(function stars(){
+  const c=document.getElementById('stars'), x=c.getContext('2d');
+  c.width=innerWidth; c.height=innerHeight;
+  for(let i=0;i<180;i++){ x.globalAlpha=Math.random()*0.8+0.1; x.fillStyle='#fff';
+    x.beginPath(); x.arc(Math.random()*c.width,Math.random()*c.height,Math.random()*1.3,0,7); x.fill(); }
+})();
+
+/* ==================== ARRANQUE ==================== */
+game.load();
+if(game.state.name){
+  document.getElementById('playerName').value=game.state.name;
+  game.boot();
+}
+document.getElementById('playerName').addEventListener('keydown',e=>{ if(e.key==='Enter') game.start(); });
+</script>
+</body>
+</html>
